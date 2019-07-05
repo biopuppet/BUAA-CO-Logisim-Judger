@@ -19,7 +19,7 @@ gcc logjudge.c -o logjudge.exe
 
 也可以直接在bat/cmd里`fc output.txt exp.txt`，效果类似。
 注意本对拍器**严格要求**logging的selection设置如下：
-![logging_setting](https://github.com/Gone157/BUAA-CO-Logisim-Judger/tree/master/pic/logging_setting.png)
+
 | 序号  |   信号   |  位宽  |
 | :---: | :------: | :----: |
 |   1   |    pc    | 32-bit |
