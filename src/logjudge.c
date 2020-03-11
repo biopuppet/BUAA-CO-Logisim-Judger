@@ -32,7 +32,7 @@ static const char *usage =
     "format below:\n"
     "\t<PC> <RegWrite> <RegAddr> <RegData> <MemWrite> <MemAddr> <MemData>\n\n"
     "Options:\n"
-    "-c\t\tcompare the result with standard result in exp.txt\n"
+    "-c\t\tcompare the result with standard result in exp.txt, disabled on default\n"
     "-h\t\tdisplay help message and exit\n"
     "-v, --version\tdisplay version info and exit\n";
 

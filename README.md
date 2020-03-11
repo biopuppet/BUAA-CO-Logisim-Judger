@@ -14,7 +14,10 @@ make
 本仓库已包含2个文件样例exp.txt和logging.txt，操作如下：
 ```bash
 ./logjudge -h # display help message
-./logjudge -c # output and compare
+
+./logjudge    # convert (only)
+./logjudge -c # convert and compare
+
 ./logjudge -v # show version info
 ```
 执行完毕后，会由logging文件生成一个格式化后的output.txt文件，随后对output.txt与exp.txt进行对拍，并在控制台输出mismatch的部分。
