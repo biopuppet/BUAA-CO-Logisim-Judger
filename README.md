@@ -4,20 +4,21 @@
 ```bash
 git clone https://github.com/Gone157/BUAA-CO-Logisim-Judger.git
 cd BUAA-CO-Logisim-Judger
-gcc logjudge.c -o logjudge.exe
+make
 ```
 
 ## 使用方法
 ```bash
-./logjudge.exe [-h] [<logging file> <expected result file>]
+./logjudge [-hc]
 ```
 本仓库已包含2个文件样例，操作如下：
 ```bash
-./logjudge.exe logging.txt exp.txt
+./logjudge -c
+./logjudge -h
 ```
 执行完毕后，会由logging文件生成一个格式化后的output.txt文件，随后对output.txt与exp.txt进行对拍，并在控制台输出mismatch的部分。
 
-也可以直接在bat/cmd里`fc output.txt exp.txt`，效果类似。
+也可以直接在bat/cmd里`fc output.txt exp.txt`，效果类似，推荐使用高级的文本对比工具（eg. VS Code）。
 注意本对拍器**严格要求**logging的selection设置如下：
 
 | 序号  |   信号   |  位宽  |
