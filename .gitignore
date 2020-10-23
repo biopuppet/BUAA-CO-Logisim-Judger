@@ -1,7 +1,11 @@
 *.exe
 *.[oa]
+*~
+*.swp
 
 logjudge
+
+tags
 
 bin/
 debug/

@@ -1,5 +1,5 @@
 /*
-Copyright 2019 biopuppet
+Copyright (C) 2019-2020 Liu Fengbo <biopuppet@outlook.com>
 
 LogJudge is free software: you can redistribute it and/or modify
 it under the terms of the GNU Lesser General Public License (LGPL) as
@@ -11,116 +11,195 @@ but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 GNU Lesser General Public License for more details.
 
-You should have received a copy of the GNU Lesser General Public License
-along with this program. If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU Lesser General Public
+License along with this program. If not, see
+<http://www.gnu.org/licenses/>.
 
 */
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-#include "cmp.h"
-#include "logjudge.h"
+struct item {
+  const char *name;
+  int width;
+  unsigned val;
+};
 
-static char buf[MAXLN], buf_log[MAXLN];
+enum {
+  PC = 0,
+  RegWrite,
+  RegAddr,
+  RegData,
+  MemWrite,
+  MemAddr,
+  MemData,
+};
 
-static const char *usage =
-    "Usage: ./logjudge [OPTION]\n"
-    "Convert Logisim logging output into readable format, and compare it with "
-    "standard result.\n\n"
-    "Please make sure your logisim logging header settings strictly follow the "
-    "format below:\n"
-    "\t<PC> <RegWrite> <RegAddr> <RegData> <MemWrite> <MemAddr> <MemData>\n\n"
-    "Options:\n"
-    "-c\t\tcompare the result with standard result in exp.txt, disabled on default\n"
-    "-h\t\tdisplay help message and exit\n"
-    "-v, --version\tdisplay version info and exit\n";
+#define VERSION    "1.0.0"
+#define LINE_LEN   (138 + 2)
 
-static const char *version = "LogJudge " VERSION "\nLicense GPLv3.\n"
-                             "Written by biopuppet\n"
-                             "Email: biopuppet@outlook.com\n"
-                             "Github: https://github.com/biopuppet\n";
+static char buf[LINE_LEN];
 
-int parse(int width, int start)
+static struct item items[] = {
+  {
+    .name = "PC",
+    .width = 32,
+  },
+  {
+    .name = "RegWrite",
+    .width = 1,
+  },
+  {
+    .name = "RegAddr",
+    .width = 5,
+  },
+  {
+    .name = "RegData",
+    .width = 32,
+  },
+  {
+    .name = "MemWrite",
+    .width = 1,
+  },
+  {
+    .name = "MemAddr",
+    .width = 5,
+  },
+  {
+    .name = "MemData",
+    .width = 32,
+  },
+};
+
+static struct item *ordered_items[7];
+
+static void usage(const char *arg)
 {
-    int num = 0;
+  fprintf(
+    stdout,
+    "Usage: %s [OPTION] <logging_file>\n"
+    "Convert Logisim logging output into readable format.\n"
+    "Options:\n"
+    "-h, --help\tdisplay help message and exit\n"
+    "-v, --version\tdisplay version info and exit\n",
+    arg);
+}
 
-    switch (width) {
-    case 32:
-        num = 0;
-        for (int i = start; i < start + 40; i += 5) {
-            num <<= 4;
-            num += (buf[i] - '0') * 8 + (buf[i + 1] - '0') * 4 +
-                   (buf[i + 2] - '0') * 2 + (buf[i + 3] - '0');
-        }
-        break;
-    case 5:
-        return (buf[start] - '0') * 16 + (buf[start + 2] - '0') * 8 +
-               (buf[start + 3] - '0') * 4 + (buf[start + 4] - '0') * 2 +
-               buf[start + 5] - '0';
-    default:
-        break;
+static const char *version =
+  "LogJudge " VERSION "\n"
+  "Copyright (C) 2019-2020 Liu Fengbo <biopuppet@outlook.com>";
+
+char *parse(struct item *item, char *p)
+{
+  int num;
+  int shift;
+
+  if (!item || !p) {
+    return NULL;
+  }
+
+  switch (item->width) {
+  case 32:
+    shift = 40;
+    num = 0;
+    int i;
+    for (i = 0; i < 40; i += 5) {
+      num <<= 4;
+      num += (p[i] - '0') * 8 + (p[i + 1] - '0') * 4 +
+             (p[i + 2] - '0') * 2 + (p[i + 3] - '0');
     }
+    break;
+  case 5:
+    shift = 7;
+    num = (p[0] - '0') * 16 + (p[2] - '0') * 8 + (p[3] - '0') * 4 +
+          (p[4] - '0') * 2 + p[5] - '0';
+    break;
+  case 1:
+    shift = 2;
+    num = p[0] - '0';
+    break;
+  default:
+    shift = 0;
+    num = 0;
+    break;
+  }
 
-    return num;
+  item->val = num;
+  return p + shift;
 }
 
 int main(int argc, char **argv)
 {
-    FILE *fp_logging, *fp_output, *fp_exp;
-    Entry entry;
-    int line;
-    int cmpflag = 0;
+  FILE *fp_logging, *fp_output;
+  const char *logging_file;
+  char *p;
+  int i, j;
 
-    if (argc > 1) {
-        if (!strcmp(argv[1], "-c")) {
-            cmpflag = 1;
-        }
-        else if (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version")) {
-            puts(version);
-            return 0;
-        }
-        else {
-            puts(usage);
-            return 0;
-        }
-    }
-    if ((fp_logging = fopen(OUT_DIR "/logging.txt", "r")) == NULL) {
-        printf("cannot open %s for reading.\n", argv[1]);
-        return -2;
-    }
-    if ((fp_output = fopen(OUT_DIR "/output.txt", "w")) == NULL) {
-        printf("cannot open output.txt for writing.\n");
-        goto error1;
-    }
-
-    fgets(buf, MAXLN, fp_logging);  // header
-    while (fgets(buf, MAXLN, fp_logging) != NULL) {
-        // puts(buf);
-        entry.pc = (parse(32, 0) << 2) + 0x3000;
-        entry.regwrite = buf[40] - '0';
-        entry.regaddr = parse(5, 42);
-        entry.regdata = parse(32, 49);
-        entry.memwrite = buf[89] - '0';
-        entry.memaddr = parse(5, 91) << 2;
-        entry.memdata = parse(32, 98);
-        if (entry.regwrite && entry.regaddr) {
-            fprintf(fp_output, "@%08x: $%2d <= %08x\n", entry.pc, entry.regaddr,
-                    entry.regdata);
-        }
-        if (entry.memwrite) {
-            fprintf(fp_output, "@%08x: *%08x <= %08x\n", entry.pc,
-                    entry.memaddr, entry.memdata);
-        }
-    }
-    fclose(fp_output);
-    if (cmpflag) {
-        cmp(OUT_DIR "/exp.txt", OUT_DIR "/output.txt");
-    }
-
-error2:
-    fclose(fp_output);
-error1:
-    fclose(fp_logging);
+  if (argc != 2) {
+    goto print_usage;
+  }
+  if (!strcmp(argv[1], "-v") || !strcmp(argv[1], "--version")) {
+    puts(version);
     return 0;
+  }
+  else if (!strcmp(argv[1], "-h") || !strcmp(argv[1], "--help")) {
+    goto print_usage;
+  }
+
+  logging_file = argv[argc - 1];
+
+  if ((fp_logging = fopen(logging_file, "r")) == NULL) {
+    fprintf(stderr, "No such file `%s'\n", logging_file);
+    return -2;
+  }
+
+  fp_output = stdout;
+
+  for (i = 0; i < 7; ++i) {
+    char tmp[10] = {0};
+    fscanf(fp_logging, " %10s", tmp);
+    for (j = 0; j < 7; ++j) {
+      if (!strcmp(tmp, items[j].name)) {
+        ordered_items[i] = items + j;
+        break;
+      }
+    }
+    if (j >= 7) {
+      fprintf(stderr, "Unrecognized logging header at `%s'\n", tmp);
+      goto out_logging;
+    }
+  }
+
+  fgets(buf, LINE_LEN, fp_logging);
+  while (fgets(buf, LINE_LEN, fp_logging) != NULL) {
+    for (i = 0, p = buf; i < 7; ++i) {
+      while (*p != '0' && *p != '1') {
+        ++p;
+      }
+      p = parse(ordered_items[i], p);
+    }
+
+    /* Adjust PC and memory address */
+    items[PC].val = (items[PC].val << 2) + 0x3000;
+    items[MemAddr].val <<= 2;
+
+    if (items[RegWrite].val && items[RegAddr].val) {
+      fprintf(fp_output, "@%08x: $%2d <= %08x\n", items[PC].val,
+              items[RegAddr].val, items[RegData].val);
+    }
+    if (items[MemWrite].val) {
+      fprintf(fp_output, "@%08x: *%08x <= %08x\n", items[PC].val,
+              items[MemAddr].val, items[MemData].val);
+    }
+  }
+
+out_logging:
+  fclose(fp_logging);
+  return 0;
+
+print_usage:
+  usage(argv[0]);
+  return 0;
 }
