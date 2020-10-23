@@ -1,5 +1,26 @@
 # BUAA-CO-Logisim-Judger
-Convert Logisim logging output into readable format.
+LogJudge is a **light-weight**, **cross-platform** tool for conversion from Logisim logging output to readable format.
+
+e.g. Convert [logging.txt](logging.txt):
+```c
+PC	RegWrite	RegAddr	RegData	MemWrite	MemAddr	MemData
+0000 0000 0000 0000 0000 0000 0000 0001	1	0 0001	1111 1111 1111 1111 0000 0000 0000 0000	0	0 0000	1111 1111 1111 1111 0000 0000 0000 0000
+......
+0000 0000 0000 0000 0000 0000 0001 1000	1	0 1001	1111 1111 1111 1111 1111 1111 0000 0000	0	0 0001	1000 0000 0000 0000 0000 0000 0000 0000
+```
+into [expected.txt](expected.txt):
+```c
+@00003000: $ 1 <= ffff0000
+@00003004: $ 1 <= ffff0000
+...
+@00003060: $ 9 <= ffffff00
+```
+Note:
+  - Logisim-logging does **NOT** record the initial state, thus the first line is missing. However, the initial state is not our concern since it's always the same in most cases.
+
+## Features
+  - Works on any end of line sequence(CRLF, LF)
+  - The logging ports can be in any order as long as the `header line` is included.
 
 ## Usage
 ```sh
@@ -11,11 +32,8 @@ fc output.txt expected.txt # Windows
 diff output.txt expected.txt # Linux
 ```
 
-## TODO
- - [ ] Logisim的logging功能不记录第一条指令，目前需要手动修正
-
-## Contribution
-Welcome PRs & issues!
+## Contributing
+Welcome all kinds of PRs & issues!
   
 ## License
-GPL v3.0
+[GPLv3](./LICENSE)
