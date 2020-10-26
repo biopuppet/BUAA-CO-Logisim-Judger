@@ -37,3 +37,7 @@ Welcome all kinds of PRs & issues!
   
 ## License
 [GPLv3](./LICENSE)
+
+## Alternatives
+- [buaa-co-p3-judge](https://github.com/karin0/buaa-co-p3-judge)
+[@karin0](https://github.com/karin0)'s work helps to assemble and run your .asm program with MARS, load dumped instructions into the ROM in your circuit, simulate it with Logisim and compare the results with output from MARS.
