@@ -19,7 +19,6 @@ License along with this program. If not, see
 
 #include <stdio.h>
 #include <string.h>
-#include <stdlib.h>
 
 struct item {
   const char *name;
